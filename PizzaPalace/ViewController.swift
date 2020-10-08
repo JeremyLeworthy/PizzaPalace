@@ -37,9 +37,9 @@ class TabBarController: UITabBarController {
 }
 
 class MenuItemCell: UITableViewCell {
-    @IBOutlet weak var imgItem: UIImageView!
     @IBOutlet weak var price: UILabel!
     @IBOutlet weak var title: UILabel!
+    @IBOutlet weak var imgItem: UIImageView!
 }
 
 class MenuItem {
@@ -56,6 +56,7 @@ class MenuItem {
 
 class OrderViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     @IBOutlet weak var btnCheckout: UIButton!
+    @IBOutlet weak var tblMenu: UITableView!
     
     var menu: [MenuItem] = []
     var currentTotal: Double = 0
@@ -96,13 +97,13 @@ class OrderViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     func createMenu() -> [MenuItem] {
-        return [MenuItem(imgName: "", price: 7.99, name: "Pepperoni"),
-                MenuItem(imgName: "", price: 6.99, name: "Cheese"),
-                MenuItem(imgName: "", price: 7.99, name: "Deluxe"),
-                MenuItem(imgName: "", price: 7.99, name: "Hawaiian"),
-                MenuItem(imgName: "", price: 8.99, name: "Meat"),
-                MenuItem(imgName: "", price: 6.99, name: "Veggie"),
-                MenuItem(imgName: "", price: 8.99, name: "Build your own")]
+        return [MenuItem(imgName: "pepperoni", price: 7.99, name: "Pepperoni"),
+                MenuItem(imgName: "cheese", price: 6.99, name: "Cheese"),
+                MenuItem(imgName: "deluxe", price: 7.99, name: "Deluxe"),
+                MenuItem(imgName: "hawaiian", price: 7.99, name: "Hawaiian"),
+                MenuItem(imgName: "meat", price: 8.99, name: "Meat"),
+                MenuItem(imgName: "veggie", price: 6.99, name: "Veggie"),
+                MenuItem(imgName: "custom", price: 8.99, name: "Build your own")]
     }
     
     @objc private func calculateTotal() {
@@ -113,13 +114,22 @@ class OrderViewController: UIViewController, UITableViewDelegate, UITableViewDat
             }
             let currentTotalString = String(format: "%.2f", currentTotal)
             btnCheckout.setTitle("Checkout - $" + currentTotalString, for: .normal)
+            btnCheckout.alpha = 1
+            btnCheckout.isEnabled = true
         } else {
             btnCheckout.setTitle("Checkout", for: .normal)
+            btnCheckout.alpha = 0.4
+            btnCheckout.isEnabled = false
         }
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        orderHistory.append(OrderHistoryEntry(purchasedBy: "Buddy", orderTotal: 24.54, timePlaced: "10/2/20, 4:25 PM", orderDetails: [RegularPizza(size: 0, crust: 0, sauce: 0, quantity: 0, basePrice: 8.99, title: "Meat")], isComplete: true))
+        tblMenu.layer.cornerRadius = 12
+        btnCheckout.layer.cornerRadius = 12
+        btnCheckout.alpha = 0.4
+        btnCheckout.isEnabled = false
         menu = createMenu()
         NotificationCenter.default.addObserver(self, selector: #selector(calculateTotal), name: Notification.Name("updateCart"), object: nil)
         profileList.append(Profile(pName: "Add payment profile", email: "", phone: "", address: "", city: "", prov: "", postal: "", cName: "", cNum: "", security: "", expiry: ""))
@@ -155,6 +165,11 @@ class RegularPizzaViewController: UIViewController {
     @IBOutlet weak var crustControl: UISegmentedControl!
     @IBOutlet weak var sauceControl: UISegmentedControl!
     @IBOutlet weak var txtQuantity: UITextField!
+    @IBOutlet weak var btnAdd: UIButton!
+    @IBOutlet weak var btnDecrease: UIButton!
+    @IBOutlet weak var btnIncrease: UIButton!
+    @IBOutlet weak var pizzaTitle: UILabel!
+    @IBOutlet weak var pizzaImage: UIImageView!
     
     var selectedPizza: MenuItem!
     var quantity = 1
@@ -183,11 +198,17 @@ class RegularPizzaViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        btnAdd.layer.cornerRadius = 12
+        btnDecrease.layer.cornerRadius = 12
+        btnIncrease.layer.cornerRadius = 12
         txtQuantity.text = "\(quantity)"
+        pizzaTitle.text = selectedPizza.name
+        pizzaImage.image = UIImage(named: selectedPizza.imgName)
+        
     }
 }
 
-class customPizza: RegularPizza {
+class CustomPizza: RegularPizza {
     var toppings: [String]
     
     init(toppings: [String], size: Int, crust: Int, sauce: Int, quantity: Int, basePrice: Double) {
@@ -196,13 +217,106 @@ class customPizza: RegularPizza {
     }
 }
 
-class CustomPizzaViewController: UIViewController {
+class ToppingCell: UITableViewCell {
+    @IBOutlet weak var topping: UILabel!
+    @IBOutlet weak var imgStatus: UIImageView!
+}
+
+class Topping {
+    let name: String
+    var status: Bool
+    
+    init(name: String, status: Bool) {
+        self.name = name
+        self.status = status
+    }
+}
+
+class CustomPizzaViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+    @IBOutlet weak var sizeControl: UISegmentedControl!
+    @IBOutlet weak var crustControl: UISegmentedControl!
+    @IBOutlet weak var sauceControl: UISegmentedControl!
+    @IBOutlet weak var txtQuantity: UITextField!
+    @IBOutlet weak var btnAdd: UIButton!
+    @IBOutlet weak var btnDecrease: UIButton!
+    @IBOutlet weak var btnIncrease: UIButton!
+    @IBOutlet weak var tblToppings: UITableView!
+    
+    var toppings: [Topping] = []
+    var quantity = 1
+    
     @IBAction func goBack(_ sender: UIButton) {
         dismiss(animated: true, completion: {})
     }
     
+    @IBAction func addToCart(_ sender: UIButton) {
+        let pizza = CustomPizza(toppings: [], size: sizeControl.selectedSegmentIndex, crust: crustControl.selectedSegmentIndex, sauce: sauceControl.selectedSegmentIndex, quantity: quantity, basePrice: 8.99)
+        currentOrder.append(pizza)
+        NotificationCenter.default.post(name: Notification.Name("updateCart"), object: nil)
+        dismiss(animated: true, completion: {})
+    }
+    
+    @IBAction func adjustQuantity(_ sender: UIButton) {
+        if sender.accessibilityIdentifier == "inc" {
+            quantity += 1
+        } else {
+            if quantity > 1 {
+                quantity -= 1
+            }
+        }
+        txtQuantity.text = "\(quantity)"
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return toppings.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "toppingCell", for: indexPath) as! ToppingCell
+        for i in 0 ... toppings.count - 1 {
+            if indexPath.row == i {
+                cell.topping.text = toppings[i].name
+                if toppings[i].status {
+                    cell.imgStatus.image = UIImage(named: "checked")
+                } else {
+                    cell.imgStatus.image = UIImage(named: "unchecked")
+                }
+                return cell
+            }
+        }
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        toppings[indexPath.row].status = !toppings[indexPath.row].status
+        tblToppings.reloadData()
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 65
+    }
+    
+    func createToppings() -> [Topping] {
+        let t1 = Topping(name: "Pepperoni", status: false)
+        let t2 = Topping(name: "Bacon", status: false)
+        let t3 = Topping(name: "Sausage", status: false)
+        let t4 = Topping(name: "Chicken", status: false)
+        let t5 = Topping(name: "Pepper", status: false)
+        let t6 = Topping(name: "Pineapple", status: false)
+        let t7 = Topping(name: "Mushroom", status: false)
+        let t8 = Topping(name: "Onion", status: false)
+        let t9 = Topping(name: "Extra Cheese", status: false)
+        return [t1, t2, t3, t4, t5, t6, t7, t8, t9]
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        btnAdd.layer.cornerRadius = 12
+        btnDecrease.layer.cornerRadius = 12
+        btnIncrease.layer.cornerRadius = 12
+        tblToppings.layer.cornerRadius = 12
+        toppings = createToppings()
+        txtQuantity.text = "\(quantity)"
     }
 }
 
@@ -220,6 +334,7 @@ class OrderSummaryViewController: UIViewController, UITableViewDelegate, UITable
     @IBOutlet weak var txtTotal: UITextField!
     @IBOutlet weak var profilePicker: UIPickerView!
     @IBOutlet weak var btnOrder: UIButton!
+    @IBOutlet weak var tblOrderSummary: UITableView!
     
     var currentTotal: Double = 0
     var currentTip: Double = 0
@@ -236,7 +351,7 @@ class OrderSummaryViewController: UIViewController, UITableViewDelegate, UITable
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         let currentTime = formatter.string(from: Date())
-        let newOrder = OrderHistoryEntry(purchasedBy: profileList[profilePicker.selectedRow(inComponent: 0)].profileName, orderTotal: currentTotal + currentTax, timePlaced: currentTime, orderDetails: currentOrder)
+        let newOrder = OrderHistoryEntry(purchasedBy: profileList[profilePicker.selectedRow(inComponent: 0)].profileName, orderTotal: currentTotal + currentTax, timePlaced: currentTime, orderDetails: currentOrder, isComplete: false)
         orderHistory.insert(newOrder, at: 0)
         currentTotal = 0
         currentTax = 0
@@ -391,6 +506,9 @@ class OrderSummaryViewController: UIViewController, UITableViewDelegate, UITable
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        tblOrderSummary.layer.cornerRadius = 12
+        profilePicker.layer.cornerRadius = 12
+        btnOrder.layer.cornerRadius = 12
         setCosts()
         tap = UITapGestureRecognizer(target: self, action: #selector(profilePickerTapped))
         tap.delegate = self
@@ -425,12 +543,14 @@ class OrderHistoryEntry {
     let orderTotal: Double
     let timePlaced: String
     let orderDetails: [RegularPizza]
+    var isComplete: Bool
     
-    init(purchasedBy: String, orderTotal: Double, timePlaced: String, orderDetails: [RegularPizza]) {
+    init(purchasedBy: String, orderTotal: Double, timePlaced: String, orderDetails: [RegularPizza], isComplete: Bool) {
         self.purchasedBy = purchasedBy
         self.orderTotal = orderTotal
         self.timePlaced = timePlaced
         self.orderDetails = orderDetails
+        self.isComplete = isComplete
     }
 }
 
@@ -448,7 +568,11 @@ class InfoViewController: UIViewController, UITableViewDelegate, UITableViewData
                 let orderTotalString = String(format: "%.2f", (orderHistory[i].orderTotal))
                 cell.orderTotal.text = "$" + orderTotalString
                 cell.timePlaced.text = orderHistory[i].timePlaced
-                cell.imgStatus.image = UIImage(named: "")
+                if orderHistory[i].isComplete {
+                    cell.imgStatus.image = UIImage(named: "checked")
+                } else {
+                    cell.imgStatus.image = UIImage(named: "pending")
+                }
                 return cell
             }
         }
@@ -461,7 +585,7 @@ class InfoViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        tblOrderHistory.layer.cornerRadius = 12
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -567,6 +691,8 @@ class ProfileViewController: UIViewController, UIPickerViewDelegate, UIPickerVie
         super.viewDidLoad()
         btnSave.isEnabled = false
         btnSave.alpha = 0.4
+        btnSave.layer.cornerRadius = 12
+        profilePicker.layer.cornerRadius = 12
         NotificationCenter.default.addObserver(self, selector: #selector(updateProfilePicker), name: Notification.Name("updateProfilePicker"), object: nil)
     }
 }
