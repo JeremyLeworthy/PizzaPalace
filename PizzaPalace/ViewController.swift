@@ -651,18 +651,30 @@ class ProfileViewController: UIViewController, UIPickerViewDelegate, UIPickerVie
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        print("Update form")
+        txtProfileName.text = profileList[row].profileName
+        txtEmail.text = profileList[row].email
+        txtPhone.text = profileList[row].phone
+        txtAddress.text = profileList[row].address
+        txtCity.text = profileList[row].city
+        txtProvince.text = profileList[row].province
+        txtPostalCode.text = profileList[row].postalCode
+        txtCreditName.text = profileList[row].creditName
+        txtCreditNumber.text = profileList[row].creditNumber
+        txtCreditSecurity.text = profileList[row].creditSecurity
+        txtCreditExpiry.text = profileList[row].creditSecurity
     }
     
     @IBAction func checkTextfields(_ sender: UITextField) {
         let profileForm: [UITextField] = [txtProfileName, txtEmail, txtPhone, txtAddress, txtCity, txtProvince, txtPostalCode, txtCreditName, txtCreditNumber, txtCreditSecurity, txtCreditExpiry]
-        var emptyFieldCount = 0
+        var errorCount = 0
+        
         for textField in profileForm {
             if !textField.hasText {
-                emptyFieldCount += 1
+                errorCount += 1
             }
         }
-        if emptyFieldCount == 0 {
+        
+        if errorCount == 0 {
             btnSave.isEnabled = true
             btnSave.alpha = 1
         } else {
@@ -694,6 +706,18 @@ class ProfileViewController: UIViewController, UIPickerViewDelegate, UIPickerVie
         btnSave.layer.cornerRadius = 12
         profilePicker.layer.cornerRadius = 12
         NotificationCenter.default.addObserver(self, selector: #selector(updateProfilePicker), name: Notification.Name("updateProfilePicker"), object: nil)
+    }
+}
+
+class FindLocationViewController: UIViewController {
+    @IBOutlet weak var imgMap: UIImageView!
+    
+    @IBAction func searchForLocation(_ sender: UIButton) {
+        imgMap.image = UIImage(named: "mapWithLocations")
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
     }
 }
 
